@@ -1,9 +1,9 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Cache Components (and Partial Prefetching, which depends on it) are off on
+  // purpose: almost every page here is private to the signed-in person, so
+  // ordinary per-request rendering is simpler and just as fast.
   turbopack: {
     rules: {
       "*.css": {
@@ -12,6 +12,6 @@ const nextConfig: NextConfig = {
       },
     },
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
