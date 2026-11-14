@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ExternalLink, MapPin, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { Banknote, ExternalLink, MapPin, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { COLUMNS, type ColumnId } from "@/lib/columns"
-import type { Job } from "@/lib/jobs"
+import { WORK_MODES, type Job, type WorkMode } from "@/lib/jobs"
 import { cn } from "@/lib/utils"
 
 export type CardHandlers = {
@@ -93,6 +93,22 @@ export function JobCard({
         </div>
       )}
 
+      {(job.work_mode || job.salary) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+          {job.work_mode && (
+            <span className={cn("rounded-md px-1.5 py-0.5 font-medium", WORK_MODE_STYLES[job.work_mode])}>
+              {WORK_MODES.find((m) => m.id === job.work_mode)?.label}
+            </span>
+          )}
+          {job.salary && (
+            <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground">
+              <Banknote className="size-3 shrink-0" />
+              <span className="truncate">{job.salary}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       <p className="mt-2.5 text-[11px] text-muted-foreground/80" suppressHydrationWarning>
         {job.applied_on ? `Applied ${formatDate(job.applied_on)}` : `Added ${formatDate(job.created_at)}`}
       </p>
@@ -152,6 +168,12 @@ function CardMenu({ job, onOpen, onMove, onDelete }: { job: Job } & CardHandlers
       </DropdownMenu>
     </div>
   )
+}
+
+const WORK_MODE_STYLES: Record<WorkMode, string> = {
+  remote: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  hybrid: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  onsite: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
 }
 
 const BADGE_COLORS = [

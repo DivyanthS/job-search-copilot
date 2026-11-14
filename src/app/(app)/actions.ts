@@ -2,13 +2,17 @@
 
 import { createClient } from "@/lib/supabase/server"
 import type { ColumnId } from "@/lib/columns"
+import * as extract from "@/lib/extract/extract-job"
 import {
   JOB_COLUMNS,
+  MAX_DESCRIPTION,
   isColumnId,
   isIsoDate,
+  normalizeUrl,
   topPosition,
   validateJobInput,
   type ActionResult,
+  type ExtractOutcome,
   type Job,
   type JobInput,
 } from "@/lib/jobs"
@@ -145,4 +149,21 @@ export async function deleteJob(id: string): Promise<ActionResult<null>> {
 // Today's date as the person's browser sees it, falling back to the server's.
 function safeToday(today: string) {
   return isIsoDate(today) ? today : new Date().toISOString().slice(0, 10)
+}
+
+// ---------------------------------------------------------------------------
+// Reading job postings
+// ---------------------------------------------------------------------------
+const EXTRACT_SIGNED_OUT: ExtractOutcome = { ok: false, reason: "signed_out", error: SIGNED_OUT }
+
+export async function extractFromUrl(url: string): Promise<ExtractOutcome> {
+  if (!(await signedInClient())) return EXTRACT_SIGNED_OUT
+  const checked = normalizeUrl(String(url ?? ""))
+  if ("error" in checked) return { ok: false, reason: "invalid", error: checked.error }
+  return extract.extractFromUrl(checked.url)
+}
+
+export async function extractFromText(text: string): Promise<ExtractOutcome> {
+  if (!(await signedInClient())) return EXTRACT_SIGNED_OUT
+  return extract.extractFromText(String(text ?? "").slice(0, MAX_DESCRIPTION))
 }

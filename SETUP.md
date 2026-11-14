@@ -91,6 +91,27 @@ By default, a sign-in link only works in the same browser you requested it from.
 3. Enter your email and click **Email me a sign-in link**.
 4. Open the email and click the link. You'll land on your board. 🎉
 
+## 7. Connect the AI (OpenRouter)
+
+The AI reads job postings for you, and later writes your application kits. Without it the app still works, but you'll type job details in yourself.
+
+1. Go to **https://openrouter.ai** and sign up.
+2. Open **Credits** and add some credit. **$10** is plenty to start: reading a job posting costs a small fraction of a cent.
+3. Open **Keys** and click **Create Key**.
+   - **Name:** `job-copilot`
+   - **Credit limit:** set one (for example `$10`) as a safety cap, so the key can never spend more than that.
+4. Copy the key (it starts with `sk-or-`). It's only shown once.
+5. Open `.env.local` and paste it in:
+
+   ```
+   OPENROUTER_API_KEY=sk-or-xxxxxxxx
+   ```
+
+   ⚠️ Never put `NEXT_PUBLIC_` in front of this one. That would expose the key to anyone using the app.
+6. Stop the app (Ctrl + C) and start it again with `npm run dev`.
+
+To check it works, click **Add job**, choose **Paste text**, and paste any job description.
+
 ---
 
 ## When the app gets a new database update
@@ -115,6 +136,8 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | *"That sign-in link has expired"* | Links work once and expire after an hour. Request a new one. |
 | *"Too many sign-in emails"* | Wait a few minutes. This is the built-in email limit. |
 | The email never arrives | Check spam. Make sure you used the email address of your Supabase account. |
+| *"The AI isn't set up yet"* when adding a job | `OPENROUTER_API_KEY` is missing from `.env.local`, or the app wasn't restarted after adding it. |
+| *"The AI couldn't read the posting just now"* | Check you have credit left on OpenRouter (and the key's credit limit isn't used up). |
 
 ## Optional: Google sign-in
 

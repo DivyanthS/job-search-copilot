@@ -29,7 +29,7 @@ SQL migrations live in `supabase/migrations/`. Run them in order in the Supabase
 
 - [x] Phase 1: Foundation (invite-only sign-in, layout, light/dark mode)
 - [x] Phase 2: Board with drag and drop
-- [ ] Phase 3: Add a job from a link or text
+- [x] Phase 3: Add a job from a link or text
 - [ ] Phase 4: Card details and reminders
 - [ ] Phase 5: Resume upload
 - [ ] Phase 6: Generate kit, editing, Word/PDF export
