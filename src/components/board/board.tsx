@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -20,13 +20,36 @@ import { Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { COLUMNS, type ColumnId } from "@/lib/columns"
-import { isColumnId, localToday, positionBetween, topPosition, type BoardActions, type Job } from "@/lib/jobs"
+import { JobPanel } from "@/components/job-panel/job-panel"
+import {
+  isColumnId,
+  localToday,
+  positionBetween,
+  toBoardJob,
+  topPosition,
+  type BoardActions,
+  type Job,
+  type JobDetails,
+} from "@/lib/jobs"
 import { BoardColumn } from "./board-column"
 import { DeleteJobDialog } from "./delete-job-dialog"
+import { DueStrip } from "./due-strip"
 import { JobCard } from "./job-card"
 import { JobDialog, type JobDialogState } from "./job-dialog"
 
 type Grouped = Record<ColumnId, Job[]>
+
+// Today's date in the person's timezone. It's null during server rendering
+// (the server can't know the timezone) and is re-checked every minute so the
+// board rolls over at midnight.
+function subscribeToClock(onChange: () => void) {
+  const timer = setInterval(onChange, 60_000)
+  return () => clearInterval(timer)
+}
+function useToday() {
+  return useSyncExternalStore(subscribeToClock, localToday, () => null)
+}
+
 
 function groupJobs(jobs: Job[]): Grouped {
   const grouped = Object.fromEntries(COLUMNS.map((c) => [c.id, [] as Job[]])) as Grouped
@@ -40,11 +63,14 @@ export function Board({ initialJobs, actions }: { initialJobs: Job[]; actions: B
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
   const [dialog, setDialog] = useState<JobDialogState>(null)
   const [deleting, setDeleting] = useState<Job | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
+  const today = useToday()
   // The board as it was when a drag started, to undo if saving fails.
   const beforeDrag = useRef<Job[] | null>(null)
 
   const columns = useMemo(() => groupJobs(jobs), [jobs])
   const activeJob = activeId ? jobs.find((j) => j.id === activeId) ?? null : null
+  const openJob = openId ? jobs.find((j) => j.id === openId) ?? null : null
 
   const sensors = useSensors(
     // Mouse: start dragging after moving 5px, so a plain click still opens the card.
@@ -167,8 +193,29 @@ export function Board({ initialJobs, actions }: { initialJobs: Job[]; actions: B
     toast.success(mode === "add" ? "Job added" : "Changes saved")
   }
 
+  // The panel saved a change: update the card, keeping the board's own
+  // column and position (a drag may have happened since).
+  const handleDetailsChange = useCallback((details: JobDetails) => {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === details.id ? { ...toBoardJob(details), status: j.status, position: j.position } : j))
+    )
+  }, [])
+
+  async function changeFollowUp(job: Job, date: string | null) {
+    const before = job.follow_up_on
+    setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, follow_up_on: date } : j)))
+    const result = await actions.updateJobDetails(job.id, { follow_up_on: date })
+    if (!result.ok) {
+      setJobs((prev) => prev.map((j) => (j.id === job.id ? { ...j, follow_up_on: before } : j)))
+      toast.error(result.error)
+    } else if (date === null) {
+      toast.success(`Follow-up with ${job.company} done`)
+    }
+  }
+
   const handlers = {
-    onOpen: (job: Job) => setDialog({ mode: "edit", job }),
+    onOpen: (job: Job) => setOpenId(job.id),
+    onEdit: (job: Job) => setDialog({ mode: "edit", job }),
     onMove: moveFromMenu,
     onDelete: (job: Job) => setDeleting(job),
   }
@@ -188,6 +235,10 @@ export function Board({ initialJobs, actions }: { initialJobs: Job[]; actions: B
           <Plus /> Add job
         </Button>
       </div>
+
+      {today && (
+        <DueStrip jobs={jobs} today={today} onOpen={handlers.onOpen} onFollowUpChange={changeFollowUp} />
+      )}
 
       <DndContext
         id="pipeline-board"
@@ -211,6 +262,7 @@ export function Board({ initialJobs, actions }: { initialJobs: Job[]; actions: B
               column={col}
               jobs={columns[col.id]}
               isFirstRun={jobs.length === 0}
+              today={today}
               onAdd={() => setDialog({ mode: "add", status: col.id })}
               {...handlers}
             />
@@ -218,12 +270,22 @@ export function Board({ initialJobs, actions }: { initialJobs: Job[]; actions: B
         </div>
 
         <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
-          {activeJob ? <JobCard job={activeJob} overlay /> : null}
+          {activeJob ? <JobCard job={activeJob} today={today} overlay /> : null}
         </DragOverlay>
       </DndContext>
 
       <JobDialog state={dialog} onClose={() => setDialog(null)} onSaved={handleSaved} actions={actions} />
       <DeleteJobDialog job={deleting} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />
+      <JobPanel
+        job={openJob}
+        today={today ?? localToday()}
+        actions={actions}
+        onClose={() => setOpenId(null)}
+        onDetailsChange={handleDetailsChange}
+        onEdit={handlers.onEdit}
+        onMove={moveFromMenu}
+        onDelete={handlers.onDelete}
+      />
     </div>
   )
 }

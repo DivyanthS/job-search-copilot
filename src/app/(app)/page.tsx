@@ -3,7 +3,16 @@ import { Board } from "@/components/board/board"
 import { JOB_COLUMNS, type Job } from "@/lib/jobs"
 import { requireProfile } from "@/lib/profile"
 import { createClient } from "@/lib/supabase/server"
-import { createJob, deleteJob, extractFromText, extractFromUrl, moveJob, updateJob } from "./actions"
+import {
+  createJob,
+  deleteJob,
+  extractFromText,
+  extractFromUrl,
+  getJobDetails,
+  moveJob,
+  updateJob,
+  updateJobDetails,
+} from "./actions"
 
 export const metadata: Metadata = { title: "Board" }
 
@@ -21,7 +30,7 @@ export default async function BoardPage() {
       {error ? (
         <BoardError />
       ) : (
-        <Board initialJobs={jobs ?? []} actions={{ createJob, updateJob, moveJob, deleteJob, extractFromUrl, extractFromText }} />
+        <Board initialJobs={jobs ?? []} actions={{ createJob, updateJob, moveJob, deleteJob, extractFromUrl, extractFromText, getJobDetails, updateJobDetails }} />
       )}
     </div>
   )

@@ -14,12 +14,14 @@ export function BoardColumn({
   jobs,
   onAdd,
   isFirstRun,
+  today,
   ...handlers
 }: {
   column: (typeof COLUMNS)[number]
   jobs: Job[]
   onAdd: () => void
   isFirstRun: boolean
+  today: string | null
 } & CardHandlers) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id, data: { type: "column" } })
 
@@ -54,7 +56,7 @@ export function BoardColumn({
       >
         <SortableContext items={jobs.map((j) => j.id)} strategy={verticalListSortingStrategy}>
           {jobs.map((job) => (
-            <SortableJobCard key={job.id} job={job} {...handlers} />
+            <SortableJobCard key={job.id} job={job} today={today} {...handlers} />
           ))}
         </SortableContext>
 

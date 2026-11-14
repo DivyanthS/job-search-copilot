@@ -2,7 +2,17 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Banknote, ExternalLink, MapPin, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import {
+  Banknote,
+  BellRing,
+  CalendarClock,
+  ExternalLink,
+  MapPin,
+  MoreHorizontal,
+  PanelRightOpen,
+  Pencil,
+  Trash2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,17 +24,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { COLUMNS, type ColumnId } from "@/lib/columns"
-import { WORK_MODES, type Job, type WorkMode } from "@/lib/jobs"
+import { WORK_MODES, daysBetween, nextInterview, type Job } from "@/lib/jobs"
 import { cn } from "@/lib/utils"
+import { CompanyBadge, PriorityStars, WORK_MODE_STYLES, formatDate, formatTime, relativeDay } from "./job-meta"
 
 export type CardHandlers = {
   onOpen: (job: Job) => void
+  onEdit: (job: Job) => void
   onMove: (job: Job, status: ColumnId) => void
   onDelete: (job: Job) => void
 }
 
 // The card as it sits in a column, wired up for drag and drop.
-export function SortableJobCard({ job, ...handlers }: { job: Job } & CardHandlers) {
+export function SortableJobCard({ job, today, ...handlers }: { job: Job; today: string | null } & CardHandlers) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: job.id,
     data: { type: "job", status: job.status },
@@ -40,7 +52,7 @@ export function SortableJobCard({ job, ...handlers }: { job: Job } & CardHandler
       aria-roledescription="Draggable job card"
       aria-label={`${job.title} at ${job.company}`}
     >
-      <JobCard job={job} {...handlers} />
+      <JobCard job={job} today={today} {...handlers} />
     </div>
   )
 }
@@ -48,11 +60,20 @@ export function SortableJobCard({ job, ...handlers }: { job: Job } & CardHandler
 // What a card looks like. Also used for the floating copy while dragging.
 export function JobCard({
   job,
+  today,
   onOpen,
+  onEdit,
   onMove,
   onDelete,
   overlay = false,
-}: { job: Job; overlay?: boolean } & Partial<CardHandlers>) {
+}: { job: Job; today: string | null; overlay?: boolean } & Partial<CardHandlers>) {
+  const workMode = WORK_MODES.find((m) => m.id === job.work_mode)
+  // Reminders only show once the browser knows today's date (avoids a
+  // mismatch between the server's timezone and the person's).
+  const followUpDays = today && job.follow_up_on ? daysBetween(today, job.follow_up_on) : null
+  const upcoming = today ? nextInterview(job.interviews ?? [], today) : undefined
+  const closed = job.status === "offer" || job.status === "rejected"
+
   return (
     <article
       onClick={() => onOpen?.(job)}
@@ -65,7 +86,10 @@ export function JobCard({
         <CompanyBadge company={job.company} />
         <div className="min-w-0 flex-1 pr-6">
           <h3 className="line-clamp-2 text-sm leading-snug font-medium">{job.title}</h3>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{job.company}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="truncate">{job.company}</span>
+            <PriorityStars value={job.priority} size="xs" />
+          </p>
         </div>
       </div>
 
@@ -93,12 +117,10 @@ export function JobCard({
         </div>
       )}
 
-      {(job.work_mode || job.salary) && (
+      {(workMode || job.salary) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-          {job.work_mode && (
-            <span className={cn("rounded-md px-1.5 py-0.5 font-medium", WORK_MODE_STYLES[job.work_mode])}>
-              {WORK_MODES.find((m) => m.id === job.work_mode)?.label}
-            </span>
+          {workMode && (
+            <span className={cn("rounded-md px-1.5 py-0.5 font-medium", WORK_MODE_STYLES[workMode.id])}>{workMode.label}</span>
           )}
           {job.salary && (
             <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground">
@@ -109,18 +131,47 @@ export function JobCard({
         </div>
       )}
 
+      {(upcoming || (followUpDays !== null && !closed)) && (
+        <div className="mt-2 flex flex-col gap-1 text-[11px]">
+          {upcoming && today && (
+            <span className="inline-flex items-center gap-1 font-medium text-violet-700 dark:text-violet-300">
+              <CalendarClock className="size-3 shrink-0" />
+              {upcoming.label} · {daysBetween(today, upcoming.date) <= 1 ? relativeDay(today, upcoming.date) : formatDate(upcoming.date)}
+              {upcoming.time && ` ${formatTime(upcoming.time)}`}
+            </span>
+          )}
+          {followUpDays !== null && !closed && job.follow_up_on && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1",
+                followUpDays < 0 && "font-medium text-rose-600 dark:text-rose-400",
+                followUpDays === 0 && "font-medium text-amber-700 dark:text-amber-400",
+                followUpDays > 0 && "text-muted-foreground"
+              )}
+            >
+              <BellRing className="size-3 shrink-0" />
+              {followUpDays < 0
+                ? `Follow-up overdue (${relativeDay(today!, job.follow_up_on)})`
+                : followUpDays === 0
+                  ? "Follow up today"
+                  : `Follow up ${formatDate(job.follow_up_on)}`}
+            </span>
+          )}
+        </div>
+      )}
+
       <p className="mt-2.5 text-[11px] text-muted-foreground/80" suppressHydrationWarning>
         {job.applied_on ? `Applied ${formatDate(job.applied_on)}` : `Added ${formatDate(job.created_at)}`}
       </p>
 
-      {!overlay && onMove && onDelete && onOpen && (
-        <CardMenu job={job} onOpen={onOpen} onMove={onMove} onDelete={onDelete} />
+      {!overlay && onOpen && onEdit && onMove && onDelete && (
+        <CardMenu job={job} onOpen={onOpen} onEdit={onEdit} onMove={onMove} onDelete={onDelete} />
       )}
     </article>
   )
 }
 
-function CardMenu({ job, onOpen, onMove, onDelete }: { job: Job } & CardHandlers) {
+function CardMenu({ job, onOpen, onEdit, onMove, onDelete }: { job: Job } & CardHandlers) {
   // Stop clicks and key presses here from also opening or dragging the card.
   const stop = (e: React.SyntheticEvent) => e.stopPropagation()
 
@@ -141,7 +192,10 @@ function CardMenu({ job, onOpen, onMove, onDelete }: { job: Job } & CardHandlers
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={() => onOpen(job)}>
-            <Pencil /> Edit
+            <PanelRightOpen /> Open
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onEdit(job)}>
+            <Pencil /> Edit info
           </DropdownMenuItem>
           {job.url && (
             <DropdownMenuItem render={<a href={job.url} target="_blank" rel="noopener noreferrer" />}>
@@ -168,47 +222,4 @@ function CardMenu({ job, onOpen, onMove, onDelete }: { job: Job } & CardHandlers
       </DropdownMenu>
     </div>
   )
-}
-
-const WORK_MODE_STYLES: Record<WorkMode, string> = {
-  remote: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  hybrid: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  onsite: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-}
-
-const BADGE_COLORS = [
-  "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
-  "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-  "bg-violet-500/15 text-violet-700 dark:text-violet-300",
-  "bg-teal-500/15 text-teal-700 dark:text-teal-300",
-]
-
-function CompanyBadge({ company }: { company: string }) {
-  let hash = 0
-  for (const ch of company.toLowerCase()) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold",
-        BADGE_COLORS[hash % BADGE_COLORS.length]
-      )}
-    >
-      {company.trim()[0]?.toUpperCase() ?? "?"}
-    </span>
-  )
-}
-
-function formatDate(value: string) {
-  // Plain dates (YYYY-MM-DD) are shown as-is, without timezone shifting.
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value)
-  const sameYear = date.getFullYear() === new Date().getFullYear()
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
-  })
 }

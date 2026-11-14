@@ -25,12 +25,39 @@ export type Job = {
   salary: string | null
   work_mode: WorkMode | null
   applied_on: string | null // YYYY-MM-DD
+  priority: number // 0 = not set, 1–3 stars
+  follow_up_on: string | null // YYYY-MM-DD
+  interviews: Interview[]
   created_at: string
   updated_at: string
 }
 
+export type Interview = {
+  id: string
+  date: string // YYYY-MM-DD
+  time: string // HH:MM, or "" when not known
+  label: string // e.g. "Phone screen"
+}
+
+export type Contact = {
+  id: string
+  name: string
+  role: string
+  email: string
+  phone: string
+}
+
+// Everything about a job, loaded when its panel is opened.
+export type JobDetails = Job & {
+  notes: string | null
+  contacts: Contact[]
+  description: string | null
+}
+
 export const JOB_COLUMNS =
-  "id, status, position, title, company, url, location, salary, work_mode, applied_on, created_at, updated_at"
+  "id, status, position, title, company, url, location, salary, work_mode, applied_on, priority, follow_up_on, interviews, created_at, updated_at"
+
+export const JOB_DETAIL_COLUMNS = `${JOB_COLUMNS}, notes, contacts, description`
 
 // What the add/edit form sends.
 export type JobInput = {
@@ -79,7 +106,20 @@ export type BoardActions = {
   deleteJob: (id: string) => Promise<ActionResult<null>>
   extractFromUrl: (url: string) => Promise<ExtractOutcome>
   extractFromText: (text: string) => Promise<ExtractOutcome>
+  getJobDetails: (id: string) => Promise<ActionResult<JobDetails>>
+  updateJobDetails: (id: string, patch: DetailsPatch) => Promise<ActionResult<JobDetails>>
 }
+
+// The parts of a job its panel can change.
+export type DetailsPatch = Partial<{
+  priority: number
+  applied_on: string | null
+  follow_up_on: string | null
+  notes: string
+  contacts: Contact[]
+  interviews: Interview[]
+  description: string
+}>
 
 export function isColumnId(value: unknown): value is ColumnId {
   return COLUMNS.some((c) => c.id === value)
@@ -180,4 +220,47 @@ export function isIsoDate(value: string) {
 
 export function localToday() {
   return new Date().toLocaleDateString("en-CA") // YYYY-MM-DD in the person's own timezone
+}
+
+// Adds days to a YYYY-MM-DD date.
+export function addDays(date: string, days: number) {
+  const d = new Date(`${date}T12:00:00`)
+  d.setDate(d.getDate() + days)
+  return d.toLocaleDateString("en-CA")
+}
+
+// Days from `from` to `to` (both YYYY-MM-DD). Negative when `to` is earlier.
+export function daysBetween(from: string, to: string) {
+  return Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86_400_000)
+}
+
+// The next interview on or after `today`, if any.
+export function nextInterview(interviews: Interview[], today: string) {
+  return [...interviews]
+    .filter((i) => i.date >= today)
+    .sort((a, b) => (a.date + (a.time || "99")).localeCompare(b.date + (b.time || "99")))[0]
+}
+
+// Days after applying before the app suggests following up.
+export const FOLLOW_UP_DAYS = 7
+
+// Keeps only the fields the board shows (the job panel loads the rest).
+export function toBoardJob(job: Job): Job {
+  return {
+    id: job.id,
+    status: job.status,
+    position: job.position,
+    title: job.title,
+    company: job.company,
+    url: job.url,
+    location: job.location,
+    salary: job.salary,
+    work_mode: job.work_mode,
+    applied_on: job.applied_on,
+    priority: job.priority,
+    follow_up_on: job.follow_up_on,
+    interviews: job.interviews,
+    created_at: job.created_at,
+    updated_at: job.updated_at,
+  }
 }

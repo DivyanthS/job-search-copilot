@@ -3,17 +3,23 @@
 import { createClient } from "@/lib/supabase/server"
 import type { ColumnId } from "@/lib/columns"
 import * as extract from "@/lib/extract/extract-job"
+import { validateDetailsPatch } from "@/lib/job-details"
 import {
+  FOLLOW_UP_DAYS,
   JOB_COLUMNS,
+  JOB_DETAIL_COLUMNS,
   MAX_DESCRIPTION,
+  addDays,
   isColumnId,
   isIsoDate,
   normalizeUrl,
   topPosition,
   validateJobInput,
   type ActionResult,
+  type DetailsPatch,
   type ExtractOutcome,
   type Job,
+  type JobDetails,
   type JobInput,
 } from "@/lib/jobs"
 
@@ -28,6 +34,31 @@ async function signedInClient() {
   return data?.claims?.sub ? supabase : null
 }
 
+// Today's date as the person's browser sees it, falling back to the server's.
+function safeToday(today: string) {
+  return isIsoDate(today) ? today : new Date().toISOString().slice(0, 10)
+}
+
+// The first time a job lands in "Applied": record the date, and suggest a
+// follow-up a week later (unless a reminder is already set).
+function appliedChanges(existing: { applied_on: string | null; follow_up_on: string | null } | null, today: string) {
+  const changes: Record<string, string> = {}
+  const date = safeToday(today)
+  if (!existing?.applied_on) changes.applied_on = date
+  if (!existing?.applied_on && !existing?.follow_up_on) changes.follow_up_on = addDays(date, FOLLOW_UP_DAYS)
+  return changes
+}
+
+async function topOfColumn(supabase: NonNullable<Awaited<ReturnType<typeof signedInClient>>>, status: ColumnId) {
+  const { data } = await supabase
+    .from("jobs")
+    .select("position")
+    .eq("status", status)
+    .order("position", { ascending: true })
+    .limit(1)
+  return topPosition(data ?? [])
+}
+
 export async function createJob(input: JobInput, today: string): Promise<ActionResult<Job>> {
   const checked = validateJobInput(input)
   if ("error" in checked) return { ok: false, error: checked.error }
@@ -35,19 +66,12 @@ export async function createJob(input: JobInput, today: string): Promise<ActionR
   const supabase = await signedInClient()
   if (!supabase) return { ok: false, error: SIGNED_OUT }
 
-  const { data: column } = await supabase
-    .from("jobs")
-    .select("position")
-    .eq("status", checked.value.status)
-    .order("position", { ascending: true })
-    .limit(1)
-
   const { data, error } = await supabase
     .from("jobs")
     .insert({
       ...checked.value,
-      position: topPosition(column ?? []),
-      applied_on: checked.value.status === "applied" ? safeToday(today) : null,
+      position: await topOfColumn(supabase, checked.value.status),
+      ...(checked.value.status === "applied" ? appliedChanges(null, today) : {}),
     })
     .select(JOB_COLUMNS)
     .single<Job>()
@@ -66,30 +90,21 @@ export async function updateJob(id: string, input: JobInput, today: string): Pro
   const supabase = await signedInClient()
   if (!supabase) return { ok: false, error: SIGNED_OUT }
 
-  const { data: existing } = await supabase.from("jobs").select("status, applied_on").eq("id", id).single()
+  const { data: existing } = await supabase
+    .from("jobs")
+    .select("status, applied_on, follow_up_on")
+    .eq("id", id)
+    .single()
   if (!existing) return { ok: false, error: "That job no longer exists." }
 
   const changes: Record<string, unknown> = { ...checked.value }
   if (existing.status !== checked.value.status) {
     // Changing column from the edit form moves the card to the top.
-    const { data: column } = await supabase
-      .from("jobs")
-      .select("position")
-      .eq("status", checked.value.status)
-      .order("position", { ascending: true })
-      .limit(1)
-    changes.position = topPosition(column ?? [])
-    if (checked.value.status === "applied" && !existing.applied_on) {
-      changes.applied_on = safeToday(today)
-    }
+    changes.position = await topOfColumn(supabase, checked.value.status)
+    if (checked.value.status === "applied") Object.assign(changes, appliedChanges(existing, today))
   }
 
-  const { data, error } = await supabase
-    .from("jobs")
-    .update(changes)
-    .eq("id", id)
-    .select(JOB_COLUMNS)
-    .single<Job>()
+  const { data, error } = await supabase.from("jobs").update(changes).eq("id", id).select(JOB_COLUMNS).single<Job>()
 
   if (error || !data) {
     console.error("updateJob:", error?.message)
@@ -110,22 +125,12 @@ export async function moveJob(
   if (!supabase) return { ok: false, error: SIGNED_OUT }
 
   const changes: Record<string, unknown> = { status, position }
-
-  // First time a card lands in "Applied": record today's date (the person's
-  // own date, sent from their browser). They can change it later.
   if (status === "applied") {
-    const { data: existing } = await supabase.from("jobs").select("applied_on").eq("id", id).single()
-    if (existing && !existing.applied_on) {
-      changes.applied_on = safeToday(today)
-    }
+    const { data: existing } = await supabase.from("jobs").select("applied_on, follow_up_on").eq("id", id).single()
+    if (existing) Object.assign(changes, appliedChanges(existing, today))
   }
 
-  const { data, error } = await supabase
-    .from("jobs")
-    .update(changes)
-    .eq("id", id)
-    .select(JOB_COLUMNS)
-    .single<Job>()
+  const { data, error } = await supabase.from("jobs").update(changes).eq("id", id).select(JOB_COLUMNS).single<Job>()
 
   if (error || !data) {
     console.error("moveJob:", error?.message)
@@ -146,9 +151,40 @@ export async function deleteJob(id: string): Promise<ActionResult<null>> {
   return { ok: true, data: null }
 }
 
-// Today's date as the person's browser sees it, falling back to the server's.
-function safeToday(today: string) {
-  return isIsoDate(today) ? today : new Date().toISOString().slice(0, 10)
+// ---------------------------------------------------------------------------
+// The job panel
+// ---------------------------------------------------------------------------
+export async function getJobDetails(id: string): Promise<ActionResult<JobDetails>> {
+  const supabase = await signedInClient()
+  if (!supabase) return { ok: false, error: SIGNED_OUT }
+
+  const { data, error } = await supabase.from("jobs").select(JOB_DETAIL_COLUMNS).eq("id", id).single<JobDetails>()
+  if (error || !data) {
+    console.error("getJobDetails:", error?.message)
+    return { ok: false, error: "Couldn't load this job. Please try again." }
+  }
+  return { ok: true, data }
+}
+
+export async function updateJobDetails(id: string, patch: DetailsPatch): Promise<ActionResult<JobDetails>> {
+  const checked = validateDetailsPatch(patch)
+  if ("error" in checked) return { ok: false, error: checked.error }
+
+  const supabase = await signedInClient()
+  if (!supabase) return { ok: false, error: SIGNED_OUT }
+
+  const { data, error } = await supabase
+    .from("jobs")
+    .update(checked.value)
+    .eq("id", id)
+    .select(JOB_DETAIL_COLUMNS)
+    .single<JobDetails>()
+
+  if (error || !data) {
+    console.error("updateJobDetails:", error?.message)
+    return { ok: false, error: SAVE_FAILED }
+  }
+  return { ok: true, data }
 }
 
 // ---------------------------------------------------------------------------
