@@ -9,7 +9,9 @@ import {
   extractFromText,
   extractFromUrl,
   getJobDetails,
+  getKitInfo,
   moveJob,
+  saveKitSection,
   updateJob,
   updateJobDetails,
 } from "./actions"
@@ -30,7 +32,7 @@ export default async function BoardPage() {
       {error ? (
         <BoardError />
       ) : (
-        <Board initialJobs={jobs ?? []} actions={{ createJob, updateJob, moveJob, deleteJob, extractFromUrl, extractFromText, getJobDetails, updateJobDetails }} />
+        <Board initialJobs={jobs ?? []} actions={{ createJob, updateJob, moveJob, deleteJob, extractFromUrl, extractFromText, getJobDetails, updateJobDetails, getKitInfo, saveKitSection }} />
       )}
     </div>
   )

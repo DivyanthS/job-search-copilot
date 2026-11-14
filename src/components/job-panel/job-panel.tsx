@@ -1,11 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Banknote, ExternalLink, Loader2, MapPin, Pencil, RotateCw, Trash2 } from "lucide-react"
+import { Banknote, ClipboardList, ExternalLink, Loader2, MapPin, Pencil, RotateCw, Sparkles, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { KitTab } from "@/components/kit/kit-tab"
 import { CompanyBadge, PriorityStars, WORK_MODE_STYLES, formatDate } from "@/components/board/job-meta"
 import { COLUMNS, type ColumnId } from "@/lib/columns"
 import { WORK_MODES, type BoardActions, type DetailsPatch, type Job, type JobDetails } from "@/lib/jobs"
@@ -51,6 +53,7 @@ function PanelBody({ job, today, actions, onDetailsChange, onEdit, onMove, onDel
   const [details, setDetails] = useState<JobDetails | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [tab, setTab] = useState<"details" | "kit">("details")
   const latestSave = useRef(0)
 
   useEffect(() => {
@@ -163,35 +166,51 @@ function PanelBody({ job, today, actions, onDetailsChange, onEdit, onMove, onDel
         )}
       </div>
 
-      {/* Details */}
-      {view ? (
-        <>
-          <ReminderSection job={view} today={today} save={save} />
-          <InterviewsSection job={view} today={today} save={save} />
-          <ContactsSection job={view} save={save} />
-          <NotesSection initial={view.notes} save={save} />
-          <DescriptionSection description={view.description} save={save} />
-        </>
-      ) : loadError ? (
-        <div className="border-t px-5 py-10 text-center">
-          <p className="text-sm text-muted-foreground">{loadError}</p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            onClick={() => {
-              setLoadError(null)
-              setAttempt((n) => n + 1)
-            }}
-          >
-            <RotateCw /> Try again
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center gap-2 border-t px-5 py-10 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading details…
-        </div>
-      )}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "details" | "kit")} className="gap-0">
+        <TabsList variant="line" className="w-full justify-start gap-4 rounded-none border-b px-5">
+          <TabsTrigger value="details" className="flex-none px-0">
+            <ClipboardList /> Details
+          </TabsTrigger>
+          <TabsTrigger value="kit" className="flex-none px-0">
+            <Sparkles /> Application kit
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="kit">
+          <KitTab job={job} actions={actions} />
+        </TabsContent>
+
+        <TabsContent value="details" className="[&>section:first-child]:border-t-0">
+          {view ? (
+            <>
+              <ReminderSection job={view} today={today} save={save} />
+              <InterviewsSection job={view} today={today} save={save} />
+              <ContactsSection job={view} save={save} />
+              <NotesSection initial={view.notes} save={save} />
+              <DescriptionSection description={view.description} save={save} />
+            </>
+          ) : loadError ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm text-muted-foreground">{loadError}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => {
+                  setLoadError(null)
+                  setAttempt((n) => n + 1)
+                }}
+              >
+                <RotateCw /> Try again
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 px-5 py-10 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Loading details…
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Footer */}
       <div className="mt-auto flex items-center justify-between gap-3 border-t px-5 py-3 text-xs text-muted-foreground">

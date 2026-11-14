@@ -32,6 +32,6 @@ SQL migrations live in `supabase/migrations/`. Run them in order in the Supabase
 - [x] Phase 3: Add a job from a link or text
 - [x] Phase 4: Card details and reminders
 - [x] Phase 5: Resume upload
-- [ ] Phase 6: Generate kit, editing, Word/PDF export
+- [x] Phase 6: Generate kit, editing, Word/PDF export
 - [ ] Phase 7: Admin (invites, monthly limits, usage)
 - [ ] Phase 8: Go live

@@ -123,3 +123,136 @@ function parseJson<T>(text: string): T | null {
     }
   }
 }
+
+export type StreamResult = {
+  text: string
+  usage: AIUsage
+  citations: { url: string; title: string }[]
+  finishReason: string | null
+}
+
+type StreamChunk = {
+  choices?: {
+    delta?: { content?: string | null; annotations?: Annotation[] }
+    message?: { annotations?: Annotation[] }
+    finish_reason?: string | null
+  }[]
+  usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number }
+  error?: { message?: string }
+}
+type Annotation = { type?: string; url_citation?: { url?: string; title?: string } }
+
+// Streams a plain-text answer, calling `onDelta` as each piece arrives.
+export async function streamText({
+  model,
+  system,
+  prompt,
+  maxTokens = 1500,
+  webSearch = false,
+  timeoutMs = 110_000,
+  onDelta,
+}: {
+  model: string
+  system: string
+  prompt: string
+  maxTokens?: number
+  webSearch?: boolean
+  timeoutMs?: number
+  onDelta: (text: string) => void
+}): Promise<StreamResult> {
+  const key = process.env.OPENROUTER_API_KEY
+  if (!key) throw new AIError("not_configured", "OPENROUTER_API_KEY is not set")
+
+  let response: Response
+  try {
+    response = await fetch(ENDPOINT, {
+      method: "POST",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+        "x-title": "Job Copilot",
+        ...(process.env.NEXT_PUBLIC_SITE_URL ? { "http-referer": process.env.NEXT_PUBLIC_SITE_URL } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        stream: true,
+        max_tokens: maxTokens,
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+        usage: { include: true },
+        ...(webSearch ? { plugins: [{ id: "web", max_results: 5 }] } : {}),
+      }),
+    })
+  } catch (err) {
+    throw new AIError("unavailable", `Couldn't reach OpenRouter: ${(err as Error).message}`)
+  }
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => "")
+    throw new AIError("unavailable", `OpenRouter returned ${response.status}: ${detail.slice(0, 300)}`)
+  }
+
+  let text = ""
+  let finishReason: string | null = null
+  const usage: AIUsage = { promptTokens: 0, completionTokens: 0 }
+  const citations = new Map<string, { url: string; title: string }>()
+
+  const addCitations = (list?: Annotation[]) => {
+    for (const a of list ?? []) {
+      const url = a?.url_citation?.url
+      if (a?.type === "url_citation" && url && /^https?:\/\//.test(url) && !citations.has(url)) {
+        citations.set(url, { url, title: (a.url_citation?.title || new URL(url).hostname).slice(0, 200) })
+      }
+    }
+  }
+
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+  let buffer = ""
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += value
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+      for (const raw of lines) {
+        const line = raw.trim()
+        if (!line.startsWith("data:")) continue // blank lines and ": OPENROUTER PROCESSING" keep-alives
+        const data = line.slice(5).trim()
+        if (data === "[DONE]") continue
+        let chunk: StreamChunk
+        try {
+          chunk = JSON.parse(data)
+        } catch {
+          continue
+        }
+        if (chunk.error) throw new AIError("unavailable", `OpenRouter error: ${chunk.error.message}`)
+        const choice = chunk.choices?.[0]
+        const piece = choice?.delta?.content
+        if (piece) {
+          text += piece
+          onDelta(piece)
+        }
+        addCitations(choice?.delta?.annotations)
+        addCitations(choice?.message?.annotations)
+        if (choice?.finish_reason) finishReason = choice.finish_reason
+        if (chunk.usage) {
+          usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens
+          usage.completionTokens = chunk.usage.completion_tokens ?? usage.completionTokens
+          usage.cost = chunk.usage.cost ?? usage.cost
+        }
+      }
+    }
+  } catch (err) {
+    if (err instanceof AIError) throw err
+    throw new AIError("unavailable", `The AI stream broke off: ${(err as Error).message}`)
+  }
+
+  if (finishReason === "error") throw new AIError("unavailable", "The AI stopped with an error")
+  if (!text.trim()) throw new AIError("bad_response", "The AI returned nothing")
+  return { text, usage, citations: [...citations.values()], finishReason }
+}

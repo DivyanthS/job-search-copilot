@@ -126,6 +126,8 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 
 - **Email limits:** Supabase's built-in email sender only delivers to members of your Supabase team (that's you) and only a few emails per hour. That's fine for now. Before you invite friends (Phase 7), we'll connect a free email service or turn on Google sign-in.
 - **Sleeping project:** free Supabase projects pause after about a week without use. If the app suddenly can't sign you in, open your Supabase dashboard and click **Restore project**.
+- **Application kits** are written by Claude Sonnet through your OpenRouter key. A full kit usually costs about 5–15 cents, including the web search for the company brief. You can see exactly what you've spent on OpenRouter's **Activity** page.
+- **Monthly kit limit:** everyone, including you, starts with 30 kits a month. Until the admin page arrives (Phase 7), you can change someone's limit in Supabase: **Table Editor → profiles → monthly_kit_limit**. If part of a kit fails, **Try again** fills in the missing part without using another kit.
 
 ## Troubleshooting
 
@@ -138,6 +140,9 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | The email never arrives | Check spam. Make sure you used the email address of your Supabase account. |
 | *"The AI isn't set up yet"* when adding a job | `OPENROUTER_API_KEY` is missing from `.env.local`, or the app wasn't restarted after adding it. |
 | *"The AI couldn't read the posting just now"* | Check you have credit left on OpenRouter (and the key's credit limit isn't used up). |
+| *"Upload your resume in Settings first"* | Open **Settings** and upload your resume (or paste it as text). Kits are tailored from it. |
+| *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, change `monthly_kit_limit` in Supabase (see "Good to know" above). |
+| A kit part says *"couldn't be written"* | Click **Try again**. It's free. If it keeps failing, check your OpenRouter credit. |
 
 ## Optional: Google sign-in
 

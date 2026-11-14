@@ -1,4 +1,5 @@
 import { COLUMNS, type ColumnId } from "@/lib/columns"
+import type { Kit, KitInfo, KitSectionId } from "@/lib/kit"
 
 export const WORK_MODES = [
   { id: "remote", label: "Remote" },
@@ -108,6 +109,8 @@ export type BoardActions = {
   extractFromText: (text: string) => Promise<ExtractOutcome>
   getJobDetails: (id: string) => Promise<ActionResult<JobDetails>>
   updateJobDetails: (id: string, patch: DetailsPatch) => Promise<ActionResult<JobDetails>>
+  getKitInfo: (jobId: string) => Promise<ActionResult<KitInfo>>
+  saveKitSection: (jobId: string, section: KitSectionId, text: string) => Promise<ActionResult<Kit>>
 }
 
 // The parts of a job its panel can change.

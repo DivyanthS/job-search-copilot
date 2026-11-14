@@ -1,6 +1,9 @@
 "use client"
 
 import { Board } from "@/components/board/board"
+import { KitGeneratorContext } from "@/components/kit/kit-client"
+import { KIT_SECTION_LIMITS } from "@/lib/kit"
+import { makePreviewGenerator, previewKits, previewUsage } from "./preview-kit"
 import { validateDetailsPatch } from "@/lib/job-details"
 import {
   FOLLOW_UP_DAYS,
@@ -164,6 +167,31 @@ const previewActions: BoardActions = {
     Object.assign(job, checked.value, { updated_at: new Date().toISOString() })
     return { ok: true, data: copy(job) }
   },
+  async getKitInfo(jobId) {
+    await wait(300)
+    const job = store.get(jobId)
+    if (!job) return { ok: false, error: "That job no longer exists." }
+    const kit = previewKits.get(jobId)
+    return {
+      ok: true,
+      data: {
+        kit: kit ? structuredClone(kit) : null,
+        usage: { ...previewUsage },
+        hasResume: true,
+        hasDescription: Boolean(job.description?.trim()),
+        aiReady: true,
+      },
+    }
+  },
+  async saveKitSection(jobId, section, text) {
+    await wait()
+    const kit = previewKits.get(jobId)
+    if (!kit) return { ok: false, error: "There's no kit to save." }
+    if (text.length > KIT_SECTION_LIMITS[section]) return { ok: false, error: "That's too long to save." }
+    kit[section] = text.trim() || null
+    kit.updated_at = new Date().toISOString()
+    return { ok: true, data: structuredClone(kit) }
+  },
   async extractFromUrl(url) {
     await wait(1200)
     if (url.includes("linkedin")) {
@@ -197,6 +225,12 @@ const previewActions: BoardActions = {
   },
 }
 
+const previewGenerate = makePreviewGenerator((id) => store.get(id))
+
 export function PreviewBoard() {
-  return <Board initialJobs={[...store.values()].map(boardJob)} actions={previewActions} />
+  return (
+    <KitGeneratorContext value={previewGenerate}>
+      <Board initialJobs={[...store.values()].map(boardJob)} actions={previewActions} />
+    </KitGeneratorContext>
+  )
 }

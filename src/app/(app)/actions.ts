@@ -3,7 +3,9 @@
 import { createClient } from "@/lib/supabase/server"
 import type { ColumnId } from "@/lib/columns"
 import * as extract from "@/lib/extract/extract-job"
+import { isAIConfigured } from "@/lib/ai/openrouter"
 import { validateDetailsPatch } from "@/lib/job-details"
+import { KIT_COLUMNS, KIT_SECTION_LIMITS, isKitSectionId, type Kit, type KitInfo, type KitSectionId } from "@/lib/kit"
 import {
   FOLLOW_UP_DAYS,
   JOB_COLUMNS,
@@ -202,4 +204,57 @@ export async function extractFromUrl(url: string): Promise<ExtractOutcome> {
 export async function extractFromText(text: string): Promise<ExtractOutcome> {
   if (!(await signedInClient())) return EXTRACT_SIGNED_OUT
   return extract.extractFromText(String(text ?? "").slice(0, MAX_DESCRIPTION))
+}
+
+// ---------------------------------------------------------------------------
+// Application kits
+// ---------------------------------------------------------------------------
+export async function getKitInfo(jobId: string): Promise<ActionResult<KitInfo>> {
+  const supabase = await signedInClient()
+  if (!supabase) return { ok: false, error: SIGNED_OUT }
+  const { data: auth } = await supabase.auth.getClaims()
+  const userId = auth!.claims.sub
+
+  const [{ data: kit, error }, { data: job }, { data: resume }, { data: profile }, { data: used }] = await Promise.all([
+    supabase.from("kits").select(KIT_COLUMNS).eq("job_id", jobId).maybeSingle<Kit>(),
+    supabase.from("jobs").select("description").eq("id", jobId).maybeSingle(),
+    supabase.from("resumes").select("user_id").eq("user_id", userId).maybeSingle(),
+    supabase.from("profiles").select("monthly_kit_limit").eq("id", userId).maybeSingle(),
+    supabase.rpc("kits_used_this_month"),
+  ])
+  if (error) {
+    console.error("getKitInfo:", error.message)
+    return { ok: false, error: "Couldn't load the kit. Please try again." }
+  }
+  return {
+    ok: true,
+    data: {
+      kit: kit ?? null,
+      usage: { used: typeof used === "number" ? used : 0, limit: profile?.monthly_kit_limit ?? 0 },
+      hasResume: Boolean(resume),
+      hasDescription: Boolean(job?.description?.trim()),
+      aiReady: isAIConfigured(),
+    },
+  }
+}
+
+export async function saveKitSection(jobId: string, section: KitSectionId, text: string): Promise<ActionResult<Kit>> {
+  if (!isKitSectionId(section)) return { ok: false, error: SAVE_FAILED }
+  const content = String(text ?? "").trim()
+  if (content.length > KIT_SECTION_LIMITS[section]) return { ok: false, error: "That's too long to save." }
+
+  const supabase = await signedInClient()
+  if (!supabase) return { ok: false, error: SIGNED_OUT }
+
+  const { data, error } = await supabase
+    .from("kits")
+    .update({ [section]: content || null })
+    .eq("job_id", jobId)
+    .select(KIT_COLUMNS)
+    .single<Kit>()
+  if (error || !data) {
+    console.error("saveKitSection:", error?.message)
+    return { ok: false, error: SAVE_FAILED }
+  }
+  return { ok: true, data }
 }
