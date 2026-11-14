@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Logo } from "@/components/logo"
+import { MainNav } from "@/components/main-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/user-menu"
 import { displayName, initials, requireProfile } from "@/lib/profile"
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
             <Logo />
           </Link>
+          <MainNav />
           <div className="ml-auto flex items-center gap-1.5">
             <ThemeToggle />
             <UserMenu
