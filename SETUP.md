@@ -20,11 +20,15 @@ It takes about 15 minutes, and you only do it once.
 
 ## 2. Set up the database
 
+The folder `supabase/migrations/` holds one file per database update, numbered in order
+(`0001_foundation.sql`, `0002_jobs.sql`, …). Run **each one once, in number order**:
+
 1. In the left sidebar, open **SQL Editor**.
 2. Click **New query**.
-3. Open the file `supabase/migrations/0001_foundation.sql` from this project, copy **everything** in it, and paste it into the editor.
+3. Open the next file from `supabase/migrations/`, copy **everything** in it, and paste it into the editor.
 4. Click **Run**. You should see *"Success. No rows returned."*
-5. Click **New query** again. Paste the line below, replacing the email with **your own** (all lowercase), then click **Run**:
+5. Repeat steps 2–4 for each remaining file.
+6. Click **New query** again. Paste the line below, replacing the email with **your own** (all lowercase), then click **Run**:
 
    ```sql
    insert into public.invites (email, role) values ('you@example.com', 'admin');
@@ -89,6 +93,14 @@ By default, a sign-in link only works in the same browser you requested it from.
 
 ---
 
+## When the app gets a new database update
+
+New phases sometimes add a file to `supabase/migrations/`. Run just the **new** file(s) in the SQL Editor (same steps as section 2). If you see *"already exists"*, that file has already been run, so skip it.
+
+## Try the board without signing in
+
+While the app is running on your computer (`npm run dev`), open **http://localhost:3000/dev/board** to play with a preview board full of sample jobs. Nothing there is saved, and this page doesn't exist on the live site.
+
 ## Good to know
 
 - **Email limits:** Supabase's built-in email sender only delivers to members of your Supabase team (that's you) and only a few emails per hour. That's fine for now. Before you invite friends (Phase 7), we'll connect a free email service or turn on Google sign-in.
@@ -99,7 +111,7 @@ By default, a sign-in link only works in the same browser you requested it from.
 | What you see | What to do |
 |---|---|
 | *"Almost there: the app needs connecting"* | `.env.local` is missing or misnamed (check it isn't `.env.local.txt`). Fix it, then stop the app (Ctrl + C) and run `npm run dev` again. |
-| *"This email hasn't been invited yet"* | Check step 2.5: the email must match exactly, all lowercase. In Supabase, **Table Editor → invites** shows the list. |
+| *"This email hasn't been invited yet"* | Check step 2.6: the email must match exactly, all lowercase. In Supabase, **Table Editor → invites** shows the list. |
 | *"That sign-in link has expired"* | Links work once and expire after an hour. Request a new one. |
 | *"Too many sign-in emails"* | Wait a few minutes. This is the built-in email limit. |
 | The email never arrives | Check spam. Make sure you used the email address of your Supabase account. |

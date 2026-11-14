@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getSupabaseEnv } from "./env"
 
 // Pages anyone can open without being signed in.
-const PUBLIC_PATHS = ["/login", "/auth"]
+// "/dev" holds development-only previews and returns 404 in production.
+const PUBLIC_PATHS = ["/login", "/auth", ...(process.env.NODE_ENV === "development" ? ["/dev"] : [])]
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
