@@ -148,6 +148,77 @@ From the Admin page you can also see how many kits each person has used this mon
 
 **To remove someone completely:** in Supabase, open **Authentication → Users**, find them, and choose **Delete user**. Their board and kits are deleted too.
 
+## 9. Put the app online
+
+This gives the app a web address you can open on any device. It uses **GitHub** (stores the code) and **Vercel** (runs the website). Both are free for personal use.
+
+### Step 1: put the code on GitHub
+
+1. Sign up at **https://github.com** (free).
+2. Click **+** (top right) → **New repository**. Name it `job-copilot`, choose **Private**, leave everything else as it is, and click **Create repository**.
+3. Copy the address it shows, which looks like `https://github.com/your-name/job-copilot.git`.
+4. Upload the code. Claude can do this for you if you share that address. To do it yourself, open a terminal in this folder and run these one at a time:
+
+   ```bash
+   git checkout master
+   ```
+
+   ```bash
+   git merge phase-1-foundation
+   ```
+
+   ```bash
+   git remote add origin https://github.com/your-name/job-copilot.git
+   ```
+
+   ```bash
+   git push -u origin master
+   ```
+
+   The first time, a window opens asking you to sign in to GitHub.
+
+### Step 2: put it on Vercel
+
+1. Go to **https://vercel.com**, click **Sign Up**, choose **Hobby**, and **Continue with GitHub**.
+2. Click **Add New… → Project**, find `job-copilot` and click **Import**.
+3. Open **Environment Variables** and add these, copying each value from your `.env.local` file:
+
+   | Name | Value |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | your Supabase project URL |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | your Supabase publishable key |
+   | `OPENROUTER_API_KEY` | your OpenRouter key |
+   | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | `true` or `false` (as in `.env.local`) |
+
+4. Click **Deploy** and wait about two minutes. Vercel then shows your app's address, something like `https://job-copilot-abc.vercel.app`.
+5. Add one more variable: open the project's **Settings → Environment Variables**, add `NEXT_PUBLIC_SITE_URL` with your app's address (no `/` at the end), and save.
+6. Open **Deployments**, click **⋯** next to the newest one, and choose **Redeploy**. Settings that start with `NEXT_PUBLIC_` only take effect after a redeploy.
+
+### Step 3: tell Supabase the new address
+
+1. In Supabase, open **Authentication → URL Configuration**.
+2. Change **Site URL** to your app's address, for example `https://job-copilot-abc.vercel.app`. Sign-in emails link here.
+3. Under **Redirect URLs**, add your address followed by `/**`, for example `https://job-copilot-abc.vercel.app/**`. Keep the `localhost` one so the app still works on your computer.
+4. Click **Save**.
+
+If you set up Google sign-in, there's nothing to change on Google's side.
+
+### Step 4: check everything works
+
+Open your app's address and work through this list. Do the first few on your phone too.
+
+- [ ] Sign in with an email link (and Google, if you set it up)
+- [ ] Add a job from a link, and another from pasted text
+- [ ] Drag a card to another column, open it, set a follow-up reminder and write a note
+- [ ] In **Settings**, upload your resume and check the text
+- [ ] Generate a kit and download the cover letter as Word and as PDF
+- [ ] In **Admin**, check your own usage shows up
+- [ ] On your phone, use the browser's **Share → Add to Home Screen** (iPhone) or **⋮ → Add to Home screen** (Android). The app then opens full-screen from its own icon.
+
+### Updating the app later
+
+Whenever new code is pushed to GitHub, Vercel puts it online by itself in about two minutes. If an update comes with a new file in `supabase/migrations/`, run it in Supabase **before** pushing (see "When the app gets a new database update").
+
 ---
 
 ## When the app gets a new database update
@@ -180,6 +251,10 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, open **Admin** and click the person's kit count. |
 | A friend's sign-in email never arrives | Supabase can only email you until you set up section 8, step 1. Also ask them to check spam. |
 | A friend sees *"This email hasn't been invited yet"* | They must sign in with exactly the email you invited (for Google sign-in, their Google email). Check the list on the **Admin** page. |
+| Online, the sign-in email link opens `localhost` | Supabase's **Site URL** still points at your computer. See section 9, step 3. |
+| Online, the app says *"needs connecting"* or *"isn't connected to Supabase yet"* | The environment variables are missing in Vercel. Add them (section 9, step 2) and **Redeploy**. |
+| I changed a setting in Vercel but nothing changed | Settings only take effect after a **Redeploy** (Deployments → ⋯ → Redeploy). |
+| Online, kits stop after about a minute | In Vercel, open **Settings → Functions** and make sure **Fluid Compute** is on (it is for new projects). |
 | There's no **Admin** link | Only admins see it. Your account is made admin in section 2, step 6. |
 | A kit part says *"couldn't be written"* | Click **Try again**. It's free. If it keeps failing, check your OpenRouter credit. |
 

@@ -34,4 +34,4 @@ SQL migrations live in `supabase/migrations/`. Run them in order in the Supabase
 - [x] Phase 5: Resume upload
 - [x] Phase 6: Generate kit, editing, Word/PDF export
 - [x] Phase 7: Admin (invites, monthly limits, usage)
-- [ ] Phase 8: Go live
+- [ ] Phase 8: Go live (the app is ready: follow SETUP.md section 9)
