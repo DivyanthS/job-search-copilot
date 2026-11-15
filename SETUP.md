@@ -112,6 +112,42 @@ The AI reads job postings for you, and later writes your application kits. Witho
 
 To check it works, click **Add job**, choose **Paste text**, and paste any job description.
 
+## 8. Invite friends (optional)
+
+### Step 1: let Supabase email your friends
+
+Supabase's built-in email sender only delivers to **you**. Before friends can get sign-in links, choose **one** of these:
+
+**Option A: send sign-in emails from your Gmail (easiest)**
+
+1. Your Google account needs **2-Step Verification** switched on: **myaccount.google.com → Security**.
+2. Go to **myaccount.google.com/apppasswords**, create an app password named `Job Copilot`, and copy the 16-character password. Keep it private, like any password.
+3. In Supabase, open **Authentication → Emails → SMTP Settings** and switch on **custom SMTP**:
+   - **Sender email:** your Gmail address · **Sender name:** `Job Copilot`
+   - **Host:** `smtp.gmail.com` · **Port:** `465`
+   - **Username:** your Gmail address · **Password:** the app password from step 2
+4. Click **Save**. Sign-in emails now come from your Gmail (Gmail allows about 500 a day).
+
+**Option B: let friends sign in with Google instead (no emails needed)**
+
+1. Go to **console.cloud.google.com** and create a project called `Job Copilot`.
+2. Open **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name and your email, save, then click **Publish app**. Basic Google sign-in doesn't need a review.
+3. Open **Credentials → Create credentials → OAuth client ID → Web application**.
+4. In Supabase, open **Authentication → Sign In / Providers → Google**, and copy the **Callback URL** it shows.
+5. Back in Google, paste that address under **Authorised redirect URIs** and click **Create**. Copy the **Client ID** and **Client secret** it gives you.
+6. In Supabase's Google settings, switch Google **on**, paste the Client ID and Client secret, and save.
+7. In `.env.local`, change the last line to `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` and restart the app. A **Continue with Google** button appears on the sign-in page.
+
+### Step 2: invite them
+
+1. In the app, open **Admin** (only you can see it).
+2. Type your friend's email and click **Add invite**. If they'll use Google sign-in, use their Google email.
+3. Click **Copy message** and send it to them by email or chat. It tells them where to go and which email to use.
+
+From the Admin page you can also see how many kits each person has used this month, what they've cost, and change anyone's **monthly kit limit**. Set it to 0 to switch kits off for someone.
+
+**To remove someone completely:** in Supabase, open **Authentication → Users**, find them, and choose **Delete user**. Their board and kits are deleted too.
+
 ---
 
 ## When the app gets a new database update
@@ -124,10 +160,10 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 
 ## Good to know
 
-- **Email limits:** Supabase's built-in email sender only delivers to members of your Supabase team (that's you) and only a few emails per hour. That's fine for now. Before you invite friends (Phase 7), we'll connect a free email service or turn on Google sign-in.
+- **Email limits:** Supabase's built-in email sender only delivers to members of your Supabase team (that's you) and only a few emails per hour. Before inviting friends, set up section 8, step 1.
 - **Sleeping project:** free Supabase projects pause after about a week without use. If the app suddenly can't sign you in, open your Supabase dashboard and click **Restore project**.
 - **Application kits** are written by Claude Sonnet through your OpenRouter key. A full kit usually costs about 5–15 cents, including the web search for the company brief. You can see exactly what you've spent on OpenRouter's **Activity** page.
-- **Monthly kit limit:** everyone, including you, starts with 30 kits a month. Until the admin page arrives (Phase 7), you can change someone's limit in Supabase: **Table Editor → profiles → monthly_kit_limit**. If part of a kit fails, **Try again** fills in the missing part without using another kit.
+- **Monthly kit limit:** everyone, including you, starts with 30 kits a month. Change anyone's limit (including your own) on the **Admin** page. If part of a kit fails, **Try again** fills in the missing part without using another kit.
 
 ## Troubleshooting
 
@@ -141,9 +177,9 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | *"The AI isn't set up yet"* when adding a job | `OPENROUTER_API_KEY` is missing from `.env.local`, or the app wasn't restarted after adding it. |
 | *"The AI couldn't read the posting just now"* | Check you have credit left on OpenRouter (and the key's credit limit isn't used up). |
 | *"Upload your resume in Settings first"* | Open **Settings** and upload your resume (or paste it as text). Kits are tailored from it. |
-| *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, change `monthly_kit_limit` in Supabase (see "Good to know" above). |
+| *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, open **Admin** and click the person's kit count. |
+| A friend's sign-in email never arrives | Supabase can only email you until you set up section 8, step 1. Also ask them to check spam. |
+| A friend sees *"This email hasn't been invited yet"* | They must sign in with exactly the email you invited (for Google sign-in, their Google email). Check the list on the **Admin** page. |
+| There's no **Admin** link | Only admins see it. Your account is made admin in section 2, step 6. |
 | A kit part says *"couldn't be written"* | Click **Try again**. It's free. If it keeps failing, check your OpenRouter credit. |
 
-## Optional: Google sign-in
-
-This needs a Google Cloud project with "OAuth" credentials, which is a fiddly 15–20 minutes. It's easiest to do together when we get to inviting friends. When it's done, you set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` and a **Continue with Google** button appears on the sign-in page.

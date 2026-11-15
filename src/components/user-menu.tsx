@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import Link from "next/link"
-import { LogOut, Settings } from "lucide-react"
+import { LogOut, Settings, ShieldCheck } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -56,6 +56,11 @@ export function UserMenu({
           <DropdownMenuItem render={<Link href="/settings" />}>
             <Settings /> Settings
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem render={<Link href="/admin" />}>
+              <ShieldCheck /> Admin
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => signOutForm.current?.requestSubmit()}>
             <LogOut /> Sign out
           </DropdownMenuItem>

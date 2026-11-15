@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
             <Logo />
           </Link>
-          <MainNav />
+          <MainNav isAdmin={profile.role === "admin"} />
           <div className="ml-auto flex items-center gap-1.5">
             <ThemeToggle />
             <UserMenu
