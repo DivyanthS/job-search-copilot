@@ -15,7 +15,7 @@ It takes about 15 minutes, and you only do it once.
 3. Fill in:
    - **Name:** `job-copilot`
    - **Database password:** click *Generate*, then save it in your password manager. You won't need it often.
-   - **Region:** choose the one closest to you.
+   - **Region:** choose the one closest to you (for India, **Southeast Asia (Singapore)**). Note which one you picked: Vercel should run in the same region later (section 9).
 4. Click **Create new project** and wait a minute or two while it gets ready.
 
 ## 2. Set up the database
@@ -48,6 +48,8 @@ The folder `supabase/migrations/` holds one file per database update, numbered i
 ## 4. Make sign-in links work on any device (recommended)
 
 By default, a sign-in link only works in the same browser you requested it from. This change lets you request it on your laptop and open it on your phone, or the other way round.
+
+Supabase only lets you edit email templates once you send emails from your own account. If the template is locked, set up section 8, step 1, option A first, then come back here.
 
 1. Open **Authentication → Emails** (it may be called *Email Templates*).
 2. Choose the **Magic Link** template.
@@ -128,20 +130,25 @@ Supabase's built-in email sender only delivers to **you**. Before friends can ge
    - **Username:** your Gmail address · **Password:** the app password from step 2
 4. Click **Save**. Sign-in emails now come from your Gmail (Gmail allows about 500 a day).
 
+If the password is wrong, sign-in shows *"We couldn't send the sign-in email just now"*. Create a new app password and paste it again; a space or missing character is enough to break it.
+
 **Option B: let friends sign in with Google instead (no emails needed)**
 
 1. Go to **console.cloud.google.com** and create a project called `Job Copilot`.
-2. Open **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name and your email, save, then click **Publish app**. Basic Google sign-in doesn't need a review.
-3. Open **Credentials → Create credentials → OAuth client ID → Web application**.
-4. In Supabase, open **Authentication → Sign In / Providers → Google**, and copy the **Callback URL** it shows.
-5. Back in Google, paste that address under **Authorised redirect URIs** and click **Create**. Copy the **Client ID** and **Client secret** it gives you.
-6. In Supabase's Google settings, switch Google **on**, paste the Client ID and Client secret, and save.
-7. In `.env.local`, change the last line to `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` and restart the app. A **Continue with Google** button appears on the sign-in page.
+2. Open **Google Auth Platform** (search for it at the top) and click **Get started**. Fill in the app name and your email, choose **External**, and finish.
+3. Open **Audience**. Leave the app in **Testing** and, under **Test users**, click **Add users** and add your own Google email. Only test users can sign in (up to 100), which keeps the app private.
+4. Open **Clients → Create client** and choose **Web application**.
+5. In Supabase, open **Authentication → Sign In / Providers → Google**, and copy the **Callback URL** it shows (it ends in `/auth/v1/callback`).
+6. Back in Google, paste that address under **Authorised redirect URIs** and click **Create**. Copy the **Client ID** (it ends in `.apps.googleusercontent.com`) and the **Client secret** (it starts with `GOCSPX-`).
+7. In Supabase's Google settings, switch Google **on**, paste the Client ID and Client secret, and click **Save**. Check it now says **Enabled**.
+8. In `.env.local`, change the last line to `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` and restart the app. If the app is already online, set the same value in Vercel and **Redeploy** (section 9). A **Continue with Google** button appears on the sign-in page.
+
+The first time someone signs in, Google shows *"Google hasn't verified this app"*. That's expected for an app in Testing: click **Continue**. New Google keys can take a few minutes to start working.
 
 ### Step 2: invite them
 
 1. In the app, open **Admin** (only you can see it).
-2. Type your friend's email and click **Add invite**. If they'll use Google sign-in, use their Google email.
+2. Type your friend's email and click **Add invite**. If they'll use Google sign-in, use their Google email, **and** add that same email as a test user in Google (**Google Auth Platform → Audience → Add users**).
 3. Click **Copy message** and send it to them by email or chat. It tells them where to go and which email to use.
 
 From the Admin page you can also see how many kits each person has used this month, what they've cost, and change anyone's **monthly kit limit**. Set it to 0 to switch kits off for someone.
@@ -192,7 +199,8 @@ This gives the app a web address you can open on any device. It uses **GitHub** 
 
 4. Click **Deploy** and wait about two minutes. Vercel then shows your app's address, something like `https://job-copilot-abc.vercel.app`.
 5. Add one more variable: open the project's **Settings → Environment Variables**, add `NEXT_PUBLIC_SITE_URL` with your app's address (no `/` at the end), and save.
-6. Open **Deployments**, click **⋯** next to the newest one, and choose **Redeploy**. Settings that start with `NEXT_PUBLIC_` only take effect after a redeploy.
+6. Open **Settings → Functions → Function Regions**, untick the default region, tick the one matching your Supabase region (for Singapore, `sin1`), and save. This keeps the app quick.
+7. Open **Deployments**, click **⋯** next to the newest one, and choose **Redeploy**. Settings that start with `NEXT_PUBLIC_` only take effect after a redeploy. Vercel may email you a code to confirm it's you; the redeploy waits until you enter it.
 
 ### Step 3: tell Supabase the new address
 
@@ -251,6 +259,9 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, open **Admin** and click the person's kit count. |
 | A friend's sign-in email never arrives | Supabase can only email you until you set up section 8, step 1. Also ask them to check spam. |
 | A friend sees *"This email hasn't been invited yet"* | They must sign in with exactly the email you invited (for Google sign-in, their Google email). Check the list on the **Admin** page. |
+| *"We couldn't send the sign-in email just now"* | Supabase couldn't send the email. If you use Gmail (section 8, option A), the app password is probably wrong: create a new one and paste it again. **Vercel → Logs** shows the exact error. |
+| Google says *"Access blocked"* or the sign-in stops with an error | The person isn't a Google test user yet. Add their Google email under **Google Auth Platform → Audience → Test users**. |
+| *"Something went wrong while signing you in"* | Try again. If it keeps happening, open **Vercel → Logs** and look for a line starting *"Sign-in error"*. It says what went wrong. |
 | Online, the sign-in email link opens `localhost` | Supabase's **Site URL** still points at your computer. See section 9, step 3. |
 | Online, the app says *"needs connecting"* or *"isn't connected to Supabase yet"* | The environment variables are missing in Vercel. Add them (section 9, step 2) and **Redeploy**. |
 | I changed a setting in Vercel but nothing changed | Settings only take effect after a **Redeploy** (Deployments → ⋯ → Redeploy). |

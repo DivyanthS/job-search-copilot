@@ -1,7 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { safeNextPath, toLoginErrorCode } from "@/lib/auth-errors"
+import { logLoginError, safeNextPath, toLoginErrorCode } from "@/lib/auth-errors"
 
 // Where the email link lands once the Supabase "Magic Link" email template is
 // updated (see SETUP.md). Unlike /auth/callback, this works even when the link
@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
     if (!error) return NextResponse.redirect(`${origin}${next}`)
-    return NextResponse.redirect(`${origin}/login?error=${toLoginErrorCode(error.message)}`)
+    const errorCode = toLoginErrorCode(error)
+    logLoginError("confirm", error, errorCode)
+    return NextResponse.redirect(`${origin}/login?error=${errorCode}`)
   }
 
   return NextResponse.redirect(`${origin}/login?error=link_expired`)

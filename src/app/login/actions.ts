@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { getSupabaseEnv } from "@/lib/supabase/env"
-import { LOGIN_ERROR_MESSAGES, toLoginErrorCode } from "@/lib/auth-errors"
+import { LOGIN_ERROR_MESSAGES, logLoginError, toLoginErrorCode } from "@/lib/auth-errors"
 
 export type MagicLinkState =
   | { status: "idle" }
@@ -46,8 +46,8 @@ export async function sendMagicLink(
   })
 
   if (error) {
-    const code = toLoginErrorCode(error.message)
-    if (code === "unknown") console.error("Magic link error:", error.message)
+    const code = toLoginErrorCode(error)
+    logLoginError("send link", error, code)
     return {
       status: "error",
       message: code === "link_expired" ? LOGIN_ERROR_MESSAGES.unknown : LOGIN_ERROR_MESSAGES[code],
@@ -63,6 +63,9 @@ export async function signInWithGoogle() {
     provider: "google",
     options: { redirectTo: `${await siteOrigin()}/auth/callback` },
   })
-  if (error || !data.url) redirect("/login?error=unknown")
+  if (error || !data.url) {
+    if (error) logLoginError("google", error, "unknown")
+    redirect("/login?error=unknown")
+  }
   redirect(data.url)
 }
