@@ -9,7 +9,7 @@ with an AI "kit" for each job (cover letter, tailored resume bullets, interview 
 
 - Next.js 16 (App Router, TypeScript), Tailwind CSS 4, shadcn/ui (Base UI)
 - Supabase: Postgres, Auth (email link / Google), Row Level Security, Storage
-- OpenRouter (Claude Sonnet) for AI features
+- OpenAI (GPT-6 Luna and GPT-6.2 Sol) for AI features, or OpenRouter (Claude) as an alternative
 - Hosting: Vercel
 
 ## Run locally

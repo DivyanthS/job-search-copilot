@@ -93,24 +93,26 @@ Supabase only lets you edit email templates once you send emails from your own a
 3. Enter your email and click **Email me a sign-in link**.
 4. Open the email and click the link. You'll land on your board. 🎉
 
-## 7. Connect the AI (OpenRouter)
+## 7. Connect the AI (OpenAI)
 
-The AI reads job postings for you, and later writes your application kits. Without it the app still works, but you'll type job details in yourself.
+The AI reads job postings for you and writes your application kits. Without it the app still works, but you'll type job details in yourself.
 
-1. Go to **https://openrouter.ai** and sign up.
-2. Open **Credits** and add some credit. **$10** is plenty to start: reading a job posting costs a small fraction of a cent.
-3. Open **Keys** and click **Create Key**.
-   - **Name:** `job-copilot`
-   - **Credit limit:** set one (for example `$10`) as a safety cap, so the key can never spend more than that.
-4. Copy the key (it starts with `sk-or-`). It's only shown once.
+1. Go to **https://platform.openai.com** and sign in (the same account as ChatGPT works, but API use is billed separately).
+2. Open **Settings → Billing** and add some credit. **$10** is plenty to start: reading a job posting costs a small fraction of a cent.
+3. Optional but wise: under **Settings → Limits**, set a monthly budget so the account can never spend more than you expect.
+4. Open **API keys** and click **Create new secret key**. Name it `job-copilot` and copy the key (it starts with `sk-proj-`). It's only shown once. Keep it private: never send it in a chat or email.
 5. Open `.env.local` and paste it in:
 
    ```
-   OPENROUTER_API_KEY=sk-or-xxxxxxxx
+   OPENAI_API_KEY=sk-proj-xxxxxxxx
    ```
 
    ⚠️ Never put `NEXT_PUBLIC_` in front of this one. That would expose the key to anyone using the app.
 6. Stop the app (Ctrl + C) and start it again with `npm run dev`.
+
+The app uses **GPT-6 Luna** to read postings and **GPT-6.2 Sol** to write kits. To use different models, add `OPENAI_MODEL_FAST` or `OPENAI_MODEL_WRITER` with the model's name.
+
+**Prefer OpenRouter?** The app also works with an OpenRouter key (it starts with `sk-or-`) in `OPENROUTER_API_KEY` instead, which uses Claude models. If both keys are set, OpenAI is used.
 
 To check it works, click **Add job**, choose **Paste text**, and paste any job description.
 
@@ -194,7 +196,7 @@ This gives the app a web address you can open on any device. It uses **GitHub** 
    |---|---|
    | `NEXT_PUBLIC_SUPABASE_URL` | your Supabase project URL |
    | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | your Supabase publishable key |
-   | `OPENROUTER_API_KEY` | your OpenRouter key |
+   | `OPENAI_API_KEY` | your OpenAI key |
    | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | `true` or `false` (as in `.env.local`) |
 
 4. Click **Deploy** and wait about two minutes. Vercel then shows your app's address, something like `https://job-copilot-abc.vercel.app`.
@@ -241,7 +243,7 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 
 - **Email limits:** Supabase's built-in email sender only delivers to members of your Supabase team (that's you) and only a few emails per hour. Before inviting friends, set up section 8, step 1.
 - **Sleeping project:** free Supabase projects pause after about a week without use. If the app suddenly can't sign you in, open your Supabase dashboard and click **Restore project**.
-- **Application kits** are written by Claude Sonnet through your OpenRouter key. A full kit usually costs about 5–15 cents, including the web search for the company brief. You can see exactly what you've spent on OpenRouter's **Activity** page.
+- **Application kits** are written by GPT-6.2 Sol through your OpenAI key. A full kit usually costs about 10–25 cents, including the web search for the company brief. The costs on the **Admin** page are estimates; OpenAI's **Usage** page shows exactly what you've spent.
 - **Monthly kit limit:** everyone, including you, starts with 30 kits a month. Change anyone's limit (including your own) on the **Admin** page. If part of a kit fails, **Try again** fills in the missing part without using another kit.
 
 ## Troubleshooting
@@ -253,8 +255,8 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | *"That sign-in link has expired"* | Links work once and expire after an hour. Request a new one. |
 | *"Too many sign-in emails"* | Wait a few minutes. This is the built-in email limit. |
 | The email never arrives | Check spam. Make sure you used the email address of your Supabase account. |
-| *"The AI isn't set up yet"* when adding a job | `OPENROUTER_API_KEY` is missing from `.env.local`, or the app wasn't restarted after adding it. |
-| *"The AI couldn't read the posting just now"* | Check you have credit left on OpenRouter (and the key's credit limit isn't used up). |
+| *"The AI isn't set up yet"* when adding a job | `OPENAI_API_KEY` is missing (from `.env.local`, or from Vercel online), or the app wasn't restarted or redeployed after adding it. |
+| *"The AI couldn't read the posting just now"* | Check you have credit left on OpenAI (**Settings → Billing**) and haven't hit your monthly budget. **Vercel → Logs** shows the exact error. |
 | *"Upload your resume in Settings first"* | Open **Settings** and upload your resume (or paste it as text). Kits are tailored from it. |
 | *"You've used all 30 kits for this month"* | The allowance resets on the 1st. To raise it, open **Admin** and click the person's kit count. |
 | A friend's sign-in email never arrives | Supabase can only email you until you set up section 8, step 1. Also ask them to check spam. |
@@ -267,5 +269,5 @@ While the app is running on your computer (`npm run dev`), open **http://localho
 | I changed a setting in Vercel but nothing changed | Settings only take effect after a **Redeploy** (Deployments → ⋯ → Redeploy). |
 | Online, kits stop after about a minute | In Vercel, open **Settings → Functions** and make sure **Fluid Compute** is on (it is for new projects). |
 | There's no **Admin** link | Only admins see it. Your account is made admin in section 2, step 6. |
-| A kit part says *"couldn't be written"* | Click **Try again**. It's free. If it keeps failing, check your OpenRouter credit. |
+| A kit part says *"couldn't be written"* | Click **Try again**. It's free. If it keeps failing, check your OpenAI credit. |
 

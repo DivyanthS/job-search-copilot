@@ -1,6 +1,6 @@
 import "server-only"
 
-import { AI_MODELS, AIError, streamText, type AIUsage } from "@/lib/ai/openrouter"
+import { AI_MODELS, AIError, streamText, type AIUsage } from "@/lib/ai"
 import { KIT_SECTION_LIMITS, type KitSectionId, type KitSource } from "@/lib/kit"
 
 export type KitInput = {

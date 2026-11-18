@@ -1,35 +1,41 @@
 import "server-only"
 
-// Minimal OpenRouter client (https://openrouter.ai). The API key stays on the
-// server and is never sent to the browser.
+// OpenRouter client (https://openrouter.ai). Used when OPENROUTER_API_KEY is set
+// and OPENAI_API_KEY isn't. The key stays on the server.
+
+import {
+  AIError,
+  citationCollector,
+  parseJson,
+  readEventStream,
+  type AIUsage,
+  type GenerateJsonOptions,
+  type StreamResult,
+  type StreamTextOptions,
+} from "./shared"
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
-export const AI_MODELS = {
-  // Small, fast and very cheap: reading job postings.
+export const OPENROUTER_MODELS = {
   fast: process.env.OPENROUTER_MODEL_FAST || "anthropic/claude-haiku-5.5",
-  // Best writing quality: application kits.
   writer: process.env.OPENROUTER_MODEL_WRITER || "anthropic/claude-sonnet-5.5",
 }
 
-export function isAIConfigured() {
-  return Boolean(process.env.OPENROUTER_API_KEY)
-}
-
-export class AIError extends Error {
-  constructor(
-    public kind: "not_configured" | "unavailable" | "bad_response",
-    message: string
-  ) {
-    super(message)
+function headers(key: string) {
+  return {
+    authorization: `Bearer ${key}`,
+    "content-type": "application/json",
+    "x-title": "Job Copilot",
+    ...(process.env.NEXT_PUBLIC_SITE_URL ? { "http-referer": process.env.NEXT_PUBLIC_SITE_URL } : {}),
   }
 }
 
-export type AIUsage = { promptTokens: number; completionTokens: number; cost?: number }
+function requireKey() {
+  const key = process.env.OPENROUTER_API_KEY
+  if (!key) throw new AIError("not_configured", "OPENROUTER_API_KEY is not set")
+  return key
+}
 
-type JsonSchema = Record<string, unknown>
-
-// Asks the model for a JSON answer that matches `schema`.
 export async function generateJson<T>({
   model,
   system,
@@ -38,29 +44,15 @@ export async function generateJson<T>({
   schema,
   maxTokens = 1024,
   timeoutMs = 45_000,
-}: {
-  model: string
-  system: string
-  prompt: string
-  schemaName: string
-  schema: JsonSchema
-  maxTokens?: number
-  timeoutMs?: number
-}): Promise<{ data: T; usage: AIUsage }> {
-  const key = process.env.OPENROUTER_API_KEY
-  if (!key) throw new AIError("not_configured", "OPENROUTER_API_KEY is not set")
+}: GenerateJsonOptions): Promise<{ data: T; usage: AIUsage }> {
+  const key = requireKey()
 
   let response: Response
   try {
     response = await fetch(ENDPOINT, {
       method: "POST",
       signal: AbortSignal.timeout(timeoutMs),
-      headers: {
-        authorization: `Bearer ${key}`,
-        "content-type": "application/json",
-        "x-title": "Job Copilot",
-        ...(process.env.NEXT_PUBLIC_SITE_URL ? { "http-referer": process.env.NEXT_PUBLIC_SITE_URL } : {}),
-      },
+      headers: headers(key),
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
@@ -107,30 +99,6 @@ export async function generateJson<T>({
   }
 }
 
-// Parses JSON, tolerating a ```json fence around it.
-function parseJson<T>(text: string): T | null {
-  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
-  try {
-    return JSON.parse(trimmed) as T
-  } catch {
-    const start = trimmed.indexOf("{")
-    const end = trimmed.lastIndexOf("}")
-    if (start === -1 || end <= start) return null
-    try {
-      return JSON.parse(trimmed.slice(start, end + 1)) as T
-    } catch {
-      return null
-    }
-  }
-}
-
-export type StreamResult = {
-  text: string
-  usage: AIUsage
-  citations: { url: string; title: string }[]
-  finishReason: string | null
-}
-
 type StreamChunk = {
   choices?: {
     delta?: { content?: string | null; annotations?: Annotation[] }
@@ -142,7 +110,6 @@ type StreamChunk = {
 }
 type Annotation = { type?: string; url_citation?: { url?: string; title?: string } }
 
-// Streams a plain-text answer, calling `onDelta` as each piece arrives.
 export async function streamText({
   model,
   system,
@@ -151,29 +118,15 @@ export async function streamText({
   webSearch = false,
   timeoutMs = 110_000,
   onDelta,
-}: {
-  model: string
-  system: string
-  prompt: string
-  maxTokens?: number
-  webSearch?: boolean
-  timeoutMs?: number
-  onDelta: (text: string) => void
-}): Promise<StreamResult> {
-  const key = process.env.OPENROUTER_API_KEY
-  if (!key) throw new AIError("not_configured", "OPENROUTER_API_KEY is not set")
+}: StreamTextOptions): Promise<StreamResult> {
+  const key = requireKey()
 
   let response: Response
   try {
     response = await fetch(ENDPOINT, {
       method: "POST",
       signal: AbortSignal.timeout(timeoutMs),
-      headers: {
-        authorization: `Bearer ${key}`,
-        "content-type": "application/json",
-        "x-title": "Job Copilot",
-        ...(process.env.NEXT_PUBLIC_SITE_URL ? { "http-referer": process.env.NEXT_PUBLIC_SITE_URL } : {}),
-      },
+      headers: headers(key),
       body: JSON.stringify({
         model,
         stream: true,
@@ -199,54 +152,37 @@ export async function streamText({
   let text = ""
   let finishReason: string | null = null
   const usage: AIUsage = { promptTokens: 0, completionTokens: 0 }
-  const citations = new Map<string, { url: string; title: string }>()
-
+  const citations = citationCollector()
   const addCitations = (list?: Annotation[]) => {
     for (const a of list ?? []) {
-      const url = a?.url_citation?.url
-      if (a?.type === "url_citation" && url && /^https?:\/\//.test(url) && !citations.has(url)) {
-        citations.set(url, { url, title: (a.url_citation?.title || new URL(url).hostname).slice(0, 200) })
-      }
+      if (a?.type === "url_citation") citations.add(a.url_citation?.url, a.url_citation?.title)
     }
   }
 
-  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
-  let buffer = ""
   try {
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
-      buffer += value
-      const lines = buffer.split("\n")
-      buffer = lines.pop() ?? ""
-      for (const raw of lines) {
-        const line = raw.trim()
-        if (!line.startsWith("data:")) continue // blank lines and ": OPENROUTER PROCESSING" keep-alives
-        const data = line.slice(5).trim()
-        if (data === "[DONE]") continue
-        let chunk: StreamChunk
-        try {
-          chunk = JSON.parse(data)
-        } catch {
-          continue
-        }
-        if (chunk.error) throw new AIError("unavailable", `OpenRouter error: ${chunk.error.message}`)
-        const choice = chunk.choices?.[0]
-        const piece = choice?.delta?.content
-        if (piece) {
-          text += piece
-          onDelta(piece)
-        }
-        addCitations(choice?.delta?.annotations)
-        addCitations(choice?.message?.annotations)
-        if (choice?.finish_reason) finishReason = choice.finish_reason
-        if (chunk.usage) {
-          usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens
-          usage.completionTokens = chunk.usage.completion_tokens ?? usage.completionTokens
-          usage.cost = chunk.usage.cost ?? usage.cost
-        }
+    await readEventStream(response.body, (data) => {
+      let chunk: StreamChunk
+      try {
+        chunk = JSON.parse(data)
+      } catch {
+        return
       }
-    }
+      if (chunk.error) throw new AIError("unavailable", `OpenRouter error: ${chunk.error.message}`)
+      const choice = chunk.choices?.[0]
+      const piece = choice?.delta?.content
+      if (piece) {
+        text += piece
+        onDelta(piece)
+      }
+      addCitations(choice?.delta?.annotations)
+      addCitations(choice?.message?.annotations)
+      if (choice?.finish_reason) finishReason = choice.finish_reason
+      if (chunk.usage) {
+        usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens
+        usage.completionTokens = chunk.usage.completion_tokens ?? usage.completionTokens
+        usage.cost = chunk.usage.cost ?? usage.cost
+      }
+    })
   } catch (err) {
     if (err instanceof AIError) throw err
     throw new AIError("unavailable", `The AI stream broke off: ${(err as Error).message}`)
@@ -254,5 +190,5 @@ export async function streamText({
 
   if (finishReason === "error") throw new AIError("unavailable", "The AI stopped with an error")
   if (!text.trim()) throw new AIError("bad_response", "The AI returned nothing")
-  return { text, usage, citations: [...citations.values()], finishReason }
+  return { text, usage, citations: citations.list(), finishReason }
 }

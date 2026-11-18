@@ -205,7 +205,7 @@ const previewActions: BoardActions = {
       return {
         ok: false,
         reason: "ai_unavailable",
-        error: "The AI isn't set up yet, so please fill in the details yourself. (The app owner needs to add an OpenRouter key.)",
+        error: "The AI isn't set up yet, so please fill in the details yourself. (The app owner needs to add an AI key.)",
         data: { title: "Social Media Manager", company: "", location: "", salary: "", work_mode: "", description: SAMPLE_POSTING },
       }
     }

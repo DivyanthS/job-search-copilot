@@ -165,7 +165,7 @@ export function KitTab({ job, actions }: { job: Job; actions: BoardActions }) {
   const { kit, usage } = info
   const left = Math.max(0, usage.limit - usage.used)
   const blocker = !info.aiReady
-    ? "The AI isn't set up yet. The app owner needs to add an OpenRouter key."
+    ? "The AI isn't set up yet. The app owner needs to add an AI key."
     : !info.hasResume
       ? null // shown as a checklist item with a link
       : left === 0

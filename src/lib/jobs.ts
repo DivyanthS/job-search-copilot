@@ -90,7 +90,7 @@ export type ExtractedJob = {
 export type ExtractFailure =
   | "blocked" // the site wouldn't let us read the page
   | "not_job" // the page/text doesn't look like a job posting
-  | "ai_unavailable" // OpenRouter isn't set up, or is down
+  | "ai_unavailable" // No AI key is set, or the AI service is down
   | "invalid" // bad link or empty text
   | "signed_out"
 

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import type { ColumnId } from "@/lib/columns"
 import * as extract from "@/lib/extract/extract-job"
-import { isAIConfigured } from "@/lib/ai/openrouter"
+import { isAIConfigured } from "@/lib/ai"
 import { validateDetailsPatch } from "@/lib/job-details"
 import { KIT_COLUMNS, KIT_SECTION_LIMITS, isKitSectionId, type Kit, type KitInfo, type KitSectionId } from "@/lib/kit"
 import {

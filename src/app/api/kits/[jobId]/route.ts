@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { AI_MODELS, isAIConfigured } from "@/lib/ai/openrouter"
+import { AI_MODELS, isAIConfigured } from "@/lib/ai"
 import { isIsoDate } from "@/lib/jobs"
 import { KIT_COLUMNS, KIT_SECTIONS, missingSections, type Kit, type KitEvent, type KitSectionId } from "@/lib/kit"
 import { writeKit, type SectionResult } from "@/lib/kit-writer"
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/kits/[j
 
   if (!job) return fail("That job no longer exists.", 404)
   if (!resume?.content) return fail("Upload your resume in Settings first, so the kit can be tailored to you.", 400)
-  if (!isAIConfigured()) return fail("The AI isn't set up yet. The app owner needs to add an OpenRouter key.", 503)
+  if (!isAIConfigured()) return fail("The AI isn't set up yet. The app owner needs to add an AI key.", 503)
 
   const limit = profile?.monthly_kit_limit ?? 0
   const { data: usedData } = await supabase.rpc("kits_used_this_month")

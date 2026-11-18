@@ -1,6 +1,6 @@
 import "server-only"
 
-import { AI_MODELS, AIError, generateJson } from "@/lib/ai/openrouter"
+import { AI_MODELS, AIError, generateJson } from "@/lib/ai"
 import { isWorkMode, type ExtractOutcome, type ExtractedJob } from "@/lib/jobs"
 import { fetchPage, PageFetchError } from "./fetch-page"
 import { parsePage, tidy, type PageHints } from "./parse-page"
@@ -165,7 +165,7 @@ export async function extractFromText(raw: string): Promise<ExtractOutcome> {
 
 function aiErrorMessage(err: unknown) {
   if (err instanceof AIError && err.kind === "not_configured") {
-    return "The AI isn't set up yet, so please fill in the details yourself. (The app owner needs to add an OpenRouter key.)"
+    return "The AI isn't set up yet, so please fill in the details yourself. (The app owner needs to add an AI key.)"
   }
   return "The AI couldn't read the posting just now, so please fill in the details yourself."
 }
