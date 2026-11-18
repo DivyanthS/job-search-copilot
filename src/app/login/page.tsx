@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import { FileText, KanbanSquare, Sparkles } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -80,7 +81,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Invite-only. Ask the app owner if you need access.
+          Invite-only. Ask the app owner if you need access.{" "}
+          <Link href="/demo" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Try the demo
+          </Link>
         </p>
       </main>
     </div>

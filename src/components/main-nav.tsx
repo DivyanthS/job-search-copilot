@@ -6,17 +6,20 @@ import { KanbanSquare, Settings, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const LINKS = [
-  { href: "/", label: "Board", icon: KanbanSquare },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { path: "", label: "Board", icon: KanbanSquare },
+  { path: "/settings", label: "Settings", icon: Settings },
 ]
-const ADMIN_LINK = { href: "/admin", label: "Admin", icon: ShieldCheck }
+const ADMIN_LINK = { path: "/admin", label: "Admin", icon: ShieldCheck }
 
-export function MainNav({ isAdmin = false }: { isAdmin?: boolean }) {
+// `base` puts the links under another section, e.g. "/demo" for the public demo.
+export function MainNav({ isAdmin = false, base = "" }: { isAdmin?: boolean; base?: string }) {
   const pathname = usePathname()
+  const home = base || "/"
   return (
     <nav aria-label="Main" className="flex items-center gap-1">
-      {(isAdmin ? [...LINKS, ADMIN_LINK] : LINKS).map(({ href, label, icon: Icon }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href)
+      {(isAdmin ? [...LINKS, ADMIN_LINK] : LINKS).map(({ path, label, icon: Icon }) => {
+        const href = path ? `${base}${path}` : home
+        const active = href === home ? pathname === home : pathname.startsWith(href)
         return (
           <Link
             key={href}

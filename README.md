@@ -3,6 +3,9 @@
 A private job-application tracker: a drag-and-drop pipeline board (Wishlist → Applied → Interviewing → Offer → Rejected)
 with an AI "kit" for each job (cover letter, tailored resume bullets, interview questions, company brief).
 
+- **Live app:** https://job-search-copilot-blue.vercel.app (invite-only)
+- **Try the demo:** https://job-search-copilot-blue.vercel.app/demo (sample data, no sign-in needed)
+
 **First time?** Follow [SETUP.md](SETUP.md).
 
 **See it step by step:** [screenshots of every screen](docs/screenshots/README.md).

@@ -3,12 +3,12 @@
 import { ProfileCard } from "@/components/settings/profile-card"
 import { ResumeCard } from "@/components/settings/resume-card"
 import { MIN_RESUME_CHARS, type SettingsActions } from "@/lib/resume"
-import { previewReadResume } from "./actions"
+import { demoReadResume } from "./demo-actions"
 
 const wait = (ms = 300) => new Promise((r) => setTimeout(r, ms))
 
 const previewActions: SettingsActions = {
-  uploadResume: previewReadResume,
+  uploadResume: demoReadResume,
   async saveResumeText(text) {
     await wait()
     const content = text.trim()
@@ -23,7 +23,7 @@ const previewActions: SettingsActions = {
   },
   async getResumeDownloadUrl() {
     await wait()
-    return { ok: false, error: "Downloads aren't available in the preview." }
+    return { ok: false, error: "Downloads aren't available in the demo." }
   },
   async updateName(name) {
     await wait()
@@ -31,7 +31,7 @@ const previewActions: SettingsActions = {
   },
 }
 
-export function PreviewSettings() {
+export function DemoSettings() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 sm:px-6">
       <div>

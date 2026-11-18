@@ -1,6 +1,8 @@
 # Job Copilot, step by step
 
-A tour of the app, one screenshot per step. Apart from the sign-in page, the screenshots come from the app's preview pages, which use made-up sample jobs, people and kits. They show no real data.
+A tour of the app, one screenshot per step. Apart from the sign-in page, the screenshots come from the app's public demo, which uses made-up sample jobs, people and kits. They show no real data.
+
+**Try it yourself:** [job-search-copilot-blue.vercel.app/demo](https://job-search-copilot-blue.vercel.app/demo). No sign-in is needed, and nothing is saved.
 
 ## 1. Sign in
 

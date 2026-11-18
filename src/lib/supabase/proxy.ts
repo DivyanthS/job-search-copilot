@@ -4,8 +4,8 @@ import { getSupabaseEnv } from "./env"
 
 // Pages anyone can open without being signed in.
 // "/api" routes check sign-in themselves and reply with an error instead of
-// a redirect. "/dev" holds development-only previews (404 in production).
-const PUBLIC_PATHS = ["/login", "/auth", "/api", ...(process.env.NODE_ENV === "development" ? ["/dev"] : [])]
+// a redirect. "/demo" is the public demo with sample data (nothing saved).
+const PUBLIC_PATHS = ["/login", "/auth", "/api", "/demo"]
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))

@@ -2,7 +2,7 @@
 
 import { KIT_SECTIONS, missingSections, type Kit, type KitGenerator, type KitSectionId, type KitUsage } from "@/lib/kit"
 
-// Stand-in kit writer for the development preview: streams sample text so
+// Stand-in kit writer for the public demo: streams sample text so
 // the Kit tab can be tried without using AI credit.
 //   - "Marketing Analyst" (Litware): the company brief "fails", to try "Try again".
 

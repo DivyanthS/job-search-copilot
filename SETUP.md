@@ -235,9 +235,9 @@ Whenever new code is pushed to GitHub, Vercel puts it online by itself in about 
 
 New phases sometimes add a file to `supabase/migrations/`. Run just the **new** file(s) in the SQL Editor (same steps as section 2). If you see *"already exists"*, that file has already been run, so skip it.
 
-## Try the board without signing in
+## The public demo
 
-While the app is running on your computer (`npm run dev`), open **http://localhost:3000/dev/board** to play with a preview board full of sample jobs. Nothing there is saved, and this page doesn't exist on the live site.
+Anyone can try the app at **/demo** (for example `https://your-app.vercel.app/demo`) without signing in. It shows the real interface filled with made-up sample jobs, people and kits. Nothing there is saved, and no AI is used (job reading and kits are simulated), so visitors can't spend your AI credit. The sign-in page links to it with **Try the demo**. Real use still needs an invite.
 
 ## Good to know
 

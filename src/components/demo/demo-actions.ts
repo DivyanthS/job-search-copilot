@@ -4,11 +4,13 @@ import type { ActionResult } from "@/lib/jobs"
 import { MIN_RESUME_CHARS, checkResumeFile, fileKindFromName, type Resume } from "@/lib/resume"
 import { ResumeReadError, detectKind, readResume } from "@/lib/resume-reader"
 
-// Development-only: reads an uploaded resume with the real reader, without
-// saving anything. Used by the /dev/settings preview. Refuses to run in
-// production.
-export async function previewReadResume(form: FormData): Promise<ActionResult<Resume>> {
-  if (process.env.NODE_ENV !== "development") return { ok: false, error: "Not available." }
+// Demo Settings page: reads an uploaded resume with the real reader, without
+// saving anything. Only on your own computer (npm run dev): on the live site
+// the public demo doesn't accept files, so it can't be used to process uploads.
+export async function demoReadResume(form: FormData): Promise<ActionResult<Resume>> {
+  if (process.env.NODE_ENV !== "development") {
+    return { ok: false, error: "Uploading files isn't available in the demo. Try pasting your resume as text instead." }
+  }
 
   const file = form.get("file")
   if (!(file instanceof File)) return { ok: false, error: "Please choose a file to upload." }

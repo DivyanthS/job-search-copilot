@@ -57,6 +57,6 @@ const previewActions: AdminActions = {
   },
 }
 
-export function PreviewAdmin() {
-  return <AdminView initialPeople={SAMPLE} siteUrl="http://localhost:3000" actions={previewActions} />
+export function DemoAdmin() {
+  return <AdminView initialPeople={SAMPLE} siteUrl={process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"} actions={previewActions} />
 }

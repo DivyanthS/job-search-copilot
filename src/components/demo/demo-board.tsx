@@ -3,7 +3,7 @@
 import { Board } from "@/components/board/board"
 import { KitGeneratorContext } from "@/components/kit/kit-client"
 import { KIT_SECTION_LIMITS } from "@/lib/kit"
-import { makePreviewGenerator, previewKits, previewUsage } from "./preview-kit"
+import { makePreviewGenerator, previewKits, previewUsage } from "./demo-kit"
 import { validateDetailsPatch } from "@/lib/job-details"
 import {
   FOLLOW_UP_DAYS,
@@ -227,7 +227,7 @@ const previewActions: BoardActions = {
 
 const previewGenerate = makePreviewGenerator((id) => store.get(id))
 
-export function PreviewBoard() {
+export function DemoBoard() {
   return (
     <KitGeneratorContext value={previewGenerate}>
       <Board initialJobs={[...store.values()].map(boardJob)} actions={previewActions} />
