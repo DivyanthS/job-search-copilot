@@ -5,6 +5,10 @@ with an AI "kit" for each job (cover letter, tailored resume bullets, interview 
 
 **First time?** Follow [SETUP.md](SETUP.md).
 
+**See it step by step:** [screenshots of every screen](docs/screenshots/README.md).
+
+![Board](docs/screenshots/02-board.png)
+
 ## Tech
 
 - Next.js 16 (App Router, TypeScript), Tailwind CSS 4, shadcn/ui (Base UI)
